@@ -2,19 +2,22 @@
 
 using BadBot.Discord;
 using BadBot.Processor;
+using BadBot.Processor.Helpers;
 using dotenv.net;
 using Serilog;
-using Serilog.Core;
+using Serilog.Events;
 
+if (!Directory.Exists("WorkerLogs"))
+    Directory.CreateDirectory("WorkerLogs");
 DotEnv.Load();
+var env = DotEnv.Read();
 Log.Logger = new LoggerConfiguration()
     .WriteTo.File("latest_log.txt")
+    .WriteTo.RequestSink()
     .WriteTo.Console()
-#if DEBUG
-    .MinimumLevel.Debug()
-#else
-    .MinimumLevel.Information()
-#endif
+    .MinimumLevel.Is(env.ContainsKey("DEBUG") && env["DEBUG"] == "true"
+        ? LogEventLevel.Debug
+        : LogEventLevel.Information)
     .CreateLogger();
 Log.Information("Initialized logger");
 

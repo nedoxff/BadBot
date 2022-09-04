@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using dotenv.net;
 using DSharpPlus;
+using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -11,6 +12,7 @@ public class Client
 {
     private static DiscordClient _client;
     private static bool _started;
+    public static ulong? StatusChannelId;
 
     public static void Start()
     {
@@ -33,8 +35,14 @@ public class Client
         });
 
         var slashCommands = _client.UseSlashCommands();
-        slashCommands.RegisterCommands(Assembly.GetExecutingAssembly(), env.ContainsKey("GUILD_ID") ? ulong.Parse(env["GUILD_ID"]): null);
-        Log.Debug("Found {SlashCommandsCount} slash commands", slashCommands.RegisteredCommands.Count);
+        slashCommands.RegisterCommands(Assembly.GetExecutingAssembly(),
+            env.ContainsKey("GUILD_ID") ? ulong.Parse(env["GUILD_ID"]) : null);
+        Log.Debug("Initialized slash commands");
+
+        StatusChannelId = env.ContainsKey("STATUS_CHANNEL_ID") ? ulong.Parse(env["STATUS_CHANNEL_ID"]) : null;
+
+        _client.UseInteractivity();
+        Log.Debug("Initialized interactivity");
 
         await _client.ConnectAsync();
         await Task.Delay(-1);

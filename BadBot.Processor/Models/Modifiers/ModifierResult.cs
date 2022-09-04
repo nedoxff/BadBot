@@ -1,4 +1,4 @@
-﻿namespace BadBot.Processor.Modifiers;
+﻿namespace BadBot.Processor.Models.Modifiers;
 
 public class ModifierResult
 {

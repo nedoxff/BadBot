@@ -6,20 +6,20 @@ using Serilog.Formatting.Display;
 
 namespace BadBot.Processor.Helpers;
 
-public class RequestSink: ILogEventSink
+public class RequestSink : ILogEventSink
 {
-    private readonly IFormatProvider _formatProvider;
-    private StreamWriter _stream;
-    private readonly string _outputTemplate;
-    private MessageTemplateTextFormatter _formatter;
     private const string DefaultOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}";
-    
+    private readonly IFormatProvider _formatProvider;
+    private readonly MessageTemplateTextFormatter _formatter;
+    private readonly string _outputTemplate;
+    private StreamWriter _stream;
+
     public RequestSink(IFormatProvider formatProvider, string outputTemplate = DefaultOutputTemplate)
     {
         _formatProvider = formatProvider;
         _outputTemplate = outputTemplate;
         _formatter = new MessageTemplateTextFormatter(_outputTemplate, _formatProvider);
-        
+
         RequestQueue.RequestStarted += id =>
         {
             var path = Path.Join(Environment.CurrentDirectory, "WorkerLogs", id + ".txt");
@@ -29,7 +29,11 @@ public class RequestSink: ILogEventSink
         RequestQueue.RequestFinished += () => _stream.Close();
     }
 
-    public void Emit(LogEvent logEvent) => _formatter.Format(logEvent, _stream);
+    public void Emit(LogEvent logEvent)
+    {
+        if (_stream != null)
+            _formatter.Format(logEvent, _stream);
+    }
 }
 
 public static class RequestSinkExtensions
