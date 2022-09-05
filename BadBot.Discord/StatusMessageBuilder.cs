@@ -4,6 +4,7 @@ namespace BadBot.Discord;
 
 public class StatusMessageBuilder
 {
+    private const int MaxStatusLength = 635;
     private readonly List<string> _errors = new();
     private readonly List<string> _info = new();
     private readonly List<string> _warnings = new();
@@ -37,15 +38,15 @@ public class StatusMessageBuilder
     {
         var description = $@"Сообщения
 ```
-{(_info.Any() ? string.Join("\n", _info) : " ")}
+{(_info.Any() ? new string(string.Join("\n", _info).TakeLast(MaxStatusLength).ToArray()) : " ")}
 ```
 Предупреждения
 ```
-{(_warnings.Any() ? string.Join("\n", _warnings) : " ")}
+{(_warnings.Any() ? new string(string.Join("\n", _warnings).TakeLast(MaxStatusLength).ToArray()) : " ")}
 ```
 Ошибки
 ```
-{(_errors.Any() ? string.Join("\n", _errors) : " ")}
+{(_errors.Any() ? new string(string.Join("\n", _errors).TakeLast(MaxStatusLength).ToArray()) : " ")}
 ```
 Статус: `{(string.IsNullOrEmpty(_status) ? "Unknown" : _status)}`";
         var builder = new DiscordEmbedBuilder()

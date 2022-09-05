@@ -1,4 +1,5 @@
-﻿using BadBot.Processor.Extensions;
+﻿using System.Diagnostics;
+using BadBot.Processor.Extensions;
 using BadBot.Processor.Models.Modifiers;
 using BadBot.Processor.Models.Requests;
 using MimeTypes;
@@ -53,18 +54,41 @@ public static class RequestQueue
     private static async Task DownloadFile(Modifier modifier)
     {
         Log.Debug("Downloading file from {Url} for request {Id}", modifier.RawRequest.Url, modifier.RawRequest.Id);
-        var response = await _client.GetAsync(modifier.RawRequest.Url);
-        if (!response.IsSuccessStatusCode)
-            throw new Exception(
-                $"Trying to download a file from {modifier.RawRequest.Url} resulted in a non-successful HTTP code ({response.StatusCode})");
-        var responseType = response.Content.Headers.ContentType?.MediaType;
-        if (string.IsNullOrEmpty(responseType) ||
-            (!responseType.StartsWith("video") && !responseType.StartsWith("image")))
-            throw new Exception(
-                $"Trying to download a file from {modifier.RawRequest.Url} resulted in a non-expected content type ({(string.IsNullOrEmpty(responseType) ? "not specified" : responseType)})");
-        var saveTo = Path.Join(modifier.WorkingDirectory, "input" + MimeTypeMap.GetExtension(responseType));
-        await File.WriteAllBytesAsync(saveTo, await response.Content.ReadAsByteArrayAsync());
-        modifier.InputFile = saveTo;
+        var linkType = modifier.RawRequest.Url.GetLinkType();
+        switch (linkType)
+        {
+            case LinkType.Invalid:
+                break;
+            case LinkType.Youtube:
+                modifier.Info("Using yt-dlp to download the file");
+                var pci = new ProcessStartInfo
+                {
+                    FileName = "yt-dlp",
+                    Arguments =
+                        $"{modifier.RawRequest.Url} --merge-output-format mp4 -o \"{Path.Join(modifier.WorkingDirectory, "input.mp4")}\""
+                };
+                var process = Process.Start(pci);
+                await process!.WaitForExitAsync();
+                modifier.InputFile = Path.Join(modifier.WorkingDirectory, "input.mp4");
+                break;
+            case LinkType.Other:
+                modifier.Info("Using HttpClient to download the file");
+                var response = await _client.GetAsync(modifier.RawRequest.Url);
+                if (!response.IsSuccessStatusCode)
+                    throw new Exception(
+                        $"Trying to download a file from {modifier.RawRequest.Url} resulted in a non-successful HTTP code ({response.StatusCode})");
+                var responseType = response.Content.Headers.ContentType?.MediaType;
+                if (string.IsNullOrEmpty(responseType) ||
+                    (!responseType.StartsWith("video") && !responseType.StartsWith("image")))
+                    throw new Exception(
+                        $"Trying to download a file from {modifier.RawRequest.Url} resulted in a non-expected content type ({(string.IsNullOrEmpty(responseType) ? "not specified" : responseType)})");
+                var saveTo = Path.Join(modifier.WorkingDirectory, "input" + MimeTypeMap.GetExtension(responseType));
+                await File.WriteAllBytesAsync(saveTo, await response.Content.ReadAsByteArrayAsync());
+                modifier.InputFile = saveTo;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
     }
 
     public static void Cleanup(Modifier modifier)

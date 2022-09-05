@@ -28,7 +28,7 @@ public static class ModifierExtensions
         };
         modifier.OnInfo += async str =>
         {
-            Log.Debug($"[Request] {str}");
+            Log.Information($"[Request] {str}");
             if (message == null) return;
             statusBuilder = statusBuilder.WithInfo(str);
             await message.ModifyAsync(statusBuilder.Build());
