@@ -90,6 +90,26 @@ public static class FfmpegBuilderExtensions
         return builder;
     }
 
+    public static FfmpegBuilder GetVideoDuration(this FfmpegBuilder builder, string from, string writeTo)
+    {
+        builder.Add(async () =>
+        {
+            var duration = await Ffmpeg.RunFfprobe(builder.Modifier, $"-v 0 -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"{from}\"");
+            await File.WriteAllTextAsync(Path.Join(builder.Modifier.WorkingDirectory, writeTo), duration);
+        });
+        return builder;
+    }
+
+    public static FfmpegBuilder CompressVideo(this FfmpegBuilder builder, string from, string to, long bits, float duration)
+    {
+        if (Environment.OSVersion.Platform != PlatformID.Unix)
+            throw new Exception("Currently not supported. (I want to sleep)");
+        var bitrate = (int)Math.Floor(bits / duration);
+        builder.Add($"-i \"{from}\" -c:v libx264 -preset medium -b:v {bitrate}b -pass 1 -an -f {Path.GetExtension(to).Replace(".", "")} -y /dev/null");
+        builder.Add($"-i \"{from}\" -c:v libx264 -preset medium -b:v {bitrate}b -pass 2 -c:a copy \"{to}\"");
+        return builder;
+    }
+
     public static FfmpegBuilder CombineImages(this FfmpegBuilder builder, string from, string to, float fps)
     {
         builder.Add($"-r {fps} -i \"{Path.Join(from, "%d.png")}\" -vf format=yuv420p -r {fps} \"{to}\"");

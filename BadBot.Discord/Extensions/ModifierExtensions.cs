@@ -1,4 +1,5 @@
 ﻿using BadBot.Processor;
+using BadBot.Processor.Ffmpeg;
 using BadBot.Processor.Models.Modifiers;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
@@ -57,7 +58,16 @@ public static class ModifierExtensions
                 }
                 else
                 {
-                    await ctx.Channel.SendMessageAsync("Файл весит больше 8МБ, я (пока что) не могу его отправить.");
+                    var compressed = Path.Join(modifier.WorkingDirectory, Path.GetFileNameWithoutExtension(modifier.OutputFile) + ".mp4");
+                    await new FfmpegBuilder(modifier)
+                        .GetVideoDuration(modifier.OutputFile, "duration.txt")
+                        .CompressVideo(modifier.OutputFile,
+                            compressed, 64000000, float.Parse(await File.ReadAllTextAsync("duration.txt")))
+                        .Run();
+                    var stream = new FileStream(compressed, FileMode.Open, FileAccess.Read);
+                    await ctx.Channel.SendMessageAsync(new DiscordMessageBuilder()
+                        .WithFile(modifier.Id + ".mp4", stream));
+                    stream.Close();
                 }
             }
             catch (Exception e)
