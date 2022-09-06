@@ -92,21 +92,20 @@ public static class FfmpegBuilderExtensions
 
     public static FfmpegBuilder GetVideoDuration(this FfmpegBuilder builder, string from, string writeTo)
     {
-        builder.Add(async () =>
+        builder.Add(() =>
         {
-            var duration = await Ffmpeg.RunFfprobe(builder.Modifier, $"-v 0 -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"{from}\"");
-            await File.WriteAllTextAsync(Path.Join(builder.Modifier.WorkingDirectory, writeTo), duration);
+            var duration = Ffmpeg.RunFfprobe(builder.Modifier, $"-v 0 -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"{from}\"").Result;
+            File.WriteAllText(Path.Join(builder.Modifier.WorkingDirectory, writeTo), duration);
         });
         return builder;
     }
 
     public static FfmpegBuilder CompressVideo(this FfmpegBuilder builder, string from, string to, long bits, float duration)
     {
-        if (Environment.OSVersion.Platform != PlatformID.Unix)
-            throw new Exception("Currently not supported. (I want to sleep)");
-        var bitrate = (int)Math.Floor(bits / duration);
-        builder.Add($"-i \"{from}\" -c:v libx264 -preset medium -b:v {bitrate}b -pass 1 -an -f {Path.GetExtension(to).Replace(".", "")} -y /dev/null");
-        builder.Add($"-i \"{from}\" -c:v libx264 -preset medium -b:v {bitrate}b -pass 2 -c:a copy \"{to}\"");
+        var nullLocation = Environment.OSVersion.Platform == PlatformID.Win32NT ? "NUL" : "/dev/null";
+        var bitrate = (int)Math.Floor(bits / duration / 8000);
+        builder.Add($"-i \"{from}\" -c:v libx264 -preset medium -b:v {bitrate}k -pass 1 -an -f {Path.GetExtension(to).Replace(".", "")} -y {nullLocation}");
+        builder.Add($"-i \"{from}\" -c:v libx264 -preset medium -b:v {bitrate}k -pass 2 -c:a copy \"{to}\"");
         return builder;
     }
 

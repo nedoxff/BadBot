@@ -1,4 +1,5 @@
-﻿using BadBot.Processor;
+﻿using System.Globalization;
+using BadBot.Processor;
 using BadBot.Processor.Ffmpeg;
 using BadBot.Processor.Models.Modifiers;
 using DSharpPlus.Entities;
@@ -49,7 +50,7 @@ public static class ModifierExtensions
             try
             {
                 var path = Path.Join(modifier.WorkingDirectory, modifier.OutputFile);
-                if (new FileInfo(path).Length < 8000000) //8MB
+                if (new FileInfo(path).Length < 7000000) //8MB = 8000000
                 {
                     var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
                     await ctx.Channel.SendMessageAsync(new DiscordMessageBuilder()
@@ -58,11 +59,13 @@ public static class ModifierExtensions
                 }
                 else
                 {
-                    var compressed = Path.Join(modifier.WorkingDirectory, Path.GetFileNameWithoutExtension(modifier.OutputFile) + ".mp4");
+                    var compressed = Path.Join(modifier.WorkingDirectory, Path.GetFileNameWithoutExtension(modifier.OutputFile) + "_output.mp4");
                     await new FfmpegBuilder(modifier)
                         .GetVideoDuration(modifier.OutputFile, "duration.txt")
+                        .Run();
+                    await new FfmpegBuilder(modifier)
                         .CompressVideo(modifier.OutputFile,
-                            compressed, 64000000, float.Parse(await File.ReadAllTextAsync("duration.txt")))
+                            compressed, 60000000, float.Parse(await File.ReadAllTextAsync(Path.Join(modifier.WorkingDirectory, "duration.txt")), CultureInfo.InvariantCulture))
                         .Run();
                     var stream = new FileStream(compressed, FileMode.Open, FileAccess.Read);
                     await ctx.Channel.SendMessageAsync(new DiscordMessageBuilder()
